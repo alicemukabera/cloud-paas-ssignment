@@ -1,25 +1,30 @@
+// index.js
 const express = require('express');
 const { Pool } = require('pg');
 
 const app = express();
-app.use(express.json()); // IMPORTANT for POST requests
+app.use(express.json()); // MUST be at the top for POST requests
 
-// Connect to PostgreSQL
+// DATABASE CONNECTION
+
+// Use DATABASE_URL from Railway or local .env for local testing
 const pool = new Pool({
-  connectionString: "postgresql://postgres:Alice123@localhost:5432/railway_app"
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:Alice123@localhost:5432/railway_app",
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false // SSL for Railway
 });
 
 // Test DB connection
 pool.connect()
   .then(() => console.log("Connected to PostgreSQL"))
-  .catch(err => console.error("DB Connection Error:", err));
+  .catch(err => console.error(" DB Connection Error:", err));
 
-// GET /
+// ROUTES
+// Home route
 app.get('/', (req, res) => {
-    res.send('Cloud computing and big data are transforming the way we store, process, and analyze data.');
+  res.send('Cloud computing and big data are transforming the way we store, process, and analyze data.');
 });
 
-// GET /users
+// GET all users
 app.get('/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users');
@@ -30,10 +35,12 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// POST /users
+// POST a new user
 app.post('/users', async (req, res) => {
   try {
     const { name, sex } = req.body;
+    if (!name || !sex) return res.status(400).send("Name and sex are required");
+
     const result = await pool.query(
       'INSERT INTO users(name, sex) VALUES($1, $2) RETURNING *',
       [name, sex]
@@ -45,7 +52,10 @@ app.post('/users', async (req, res) => {
   }
 });
 
+// ----------------------------
+// START SERVER
+// ----------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
